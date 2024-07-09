@@ -41,19 +41,18 @@ for f in file_list:
     flist.append(f.split()[-1])
 filenames = config.filenames
 
-print(getDate())
+start_date = datetime.now() - timedelta(days=365)
+end_date = datetime.now()
 
 for file in filenames:
-    current_date=pd.to_datetime(datetime.now()) + pd.DateOffset(days=0)
     if(file=='CarIdentifiers' or file=='Sites'):
         pass       
     else:
-
-        fdate=str(getDate())
-        while(fdate<current_date):
+        while(start_date<end_date):
             tname=file
             master_file=dest+ tname+"/"+ tname +"_ALL.csv"
             os.makedirs(config.data_dir+tname+"/", exist_ok=True)
+            fdate = start_date.strftime("%Y-%m-%d")
             ftp_file=file+fdate+"_0000.csv"
             print(ftp_file)
             if(ftp_file in flist):
@@ -67,22 +66,23 @@ for file in filenames:
                     shutil.move(f_in, f_out)
                     # Check if 'master_file' exists
                     if not os.path.exists(master_file):
-                        # Create an empty 'master_file' if it doesn't exist
                         with open(master_file, 'w') as new_file:
-                            pass  # Empty file created
+                            pass  # Empty file created  
                     if os.path.exists(f_out) and os.path.exists(master_file):
-                         # Both files exist, proceed with reading and writing
-                        with open(f_out, 'r') as f1:
-                            original = f1.read()
-                        with open(master_file, 'a') as f2:
-                            f2.write('\n')
-                            f2.write(original)
+                        df1 = pd.read_csv(master_file, sep="|")
+                        df2 = pd.read_csv(f_out, sep="|")
+
+                        # Merge the DataFrames (concatenating rows)
+                        merged_df = pd.concat([df1, df2], ignore_index=True)
+
+                        # Write the merged data to a new CSV file
+                        merged_df.to_csv(master_file, index=False) 
                     else:
                         print("Either 'f_out' or 'master_file' does not exist. Skipping the operation.")
-            fdate=pd.to_datetime(fdate) + pd.DateOffset(days=1)
+         # Increment the start date by 1 day
+        start_date += timedelta(days=1)
+
 
 os.system("python3 /home/oracle/ClubCar/Visage/uploadOCI.py")
 shutil.rmtree(config.data_dir)
-
-
 ftp.quit()
