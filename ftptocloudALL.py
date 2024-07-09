@@ -69,14 +69,19 @@ for file in filenames:
                         with open(master_file, 'w') as new_file:
                             pass  # Empty file created  
                     if os.path.exists(f_out) and os.path.exists(master_file):
-                        df1 = pd.read_csv(master_file, sep="|")
-                        df2 = pd.read_csv(f_out, sep="|")
+                        try:
+                            df1 = pd.read_csv(master_file, sep="|")
+                            df2 = pd.read_csv(f_out, sep="|")
 
-                        # Merge the DataFrames (concatenating rows)
-                        merged_df = pd.concat([df1, df2], ignore_index=True)
+                            # Merge the DataFrames (concatenating rows)
+                            merged_df = pd.concat([df1, df2], ignore_index=True)
 
-                        # Write the merged data to a new CSV file
-                        merged_df.to_csv(master_file, index=False) 
+                            # Write the merged data to a new CSV file
+                            merged_df.to_csv(master_file, index=False) 
+                        except pd.errors.EmptyDataError:
+                              shutil.copy(f_in,master_file)
+                              print("One or both files are empty. Cannot merge.")
+
                     else:
                         print("Either 'f_out' or 'master_file' does not exist. Skipping the operation.")
          # Increment the start date by 1 day
