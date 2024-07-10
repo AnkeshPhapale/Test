@@ -28,13 +28,16 @@ with FTP() as ftp:
                 os.makedirs(os.path.join(config.data_dir, tname), exist_ok=True)
                 fdate = start_date.strftime("%Y-%m-%d")
                 ftp_file = f"{file}{fdate}_0000.csv"
-
                 if ftp_file in file_list:
                     retrfile = f"RETR {ftp_file}"
                     local_file = os.path.join(config.data_dir, tname, f"{tname}{fdate}_0000.csv")
                     with open(local_file, "wb") as fp:
                         ftp.retrbinary(retrfile, fp.write)
-
+                        f_in = ftp_file
+                        f_out = dest+ tname+"/"+ tname +fdate+"_0000.csv"
+                        shutil.move(f_in, f_out)
+                    print(start_date)
+                    print(ftp_file)
                 start_date += timedelta(days=1)
 # Run upload script (assuming it's in the same directory)
 os.system("python3 /home/oracle/ClubCar/Visage/uploadOCI.py")
