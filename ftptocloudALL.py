@@ -1,49 +1,32 @@
 from ftplib import FTP
-from datetime import timedelta, datetime
-import shutil
-import config
 import os
 
-# Create data directory if it doesn't exist
-os.makedirs(config.data_dir, exist_ok=True)
+# FTP server details
+HOST = config.HOST
+PORT = config.PORT
+USERNAME = config.usr
+PASSWORD = config.pwd
+
+# Local directory to save downloaded files
+LOCAL_DIR = config.data_dir
 
 # Connect to FTP server
 with FTP() as ftp:
-    ftp.connect(config.HOST, config.PORT)
-    ftp.login(config.usr, config.pwd)
-    dest = config.source_file_dir
+    ftp.connect(HOST, PORT)
+    ftp.login(USERNAME, PASSWORD)
 
-    # Get list of files on the server
+    # List files matching the pattern "car%"
     file_list = []
-    ftp.retrlines('LIST', file_list.append)
+    ftp.retrlines('NLST Charge%', file_list.append)
 
-    filenames = config.filenames
-    start_date = datetime.now() - timedelta(days=365)
-    end_date = datetime.now()
+    # Create local directory if it doesn't exist
+    os.makedirs(LOCAL_DIR, exist_ok=True)
 
-    for file in filenames:
-        print(file)
-        print(start_date)
-        print(end_date)
-        if file not in ('CarIdentifiers', 'Sites'):
-            while start_date < end_date:
-                tname = file
-                os.makedirs(os.path.join(config.data_dir, tname), exist_ok=True)
-                fdate = start_date.strftime("%Y-%m-%d")
-                ftp_file = f"{file}{fdate}_0000.csv"
-                print(ftp_file)
-                if ftp_file in file_list:
-                    retrfile = f"RETR {ftp_file}"
-                    local_file = os.path.join(config.data_dir, tname, f"{tname}{fdate}_0000.csv")
-                    with open(local_file, "wb") as fp:
-                        ftp.retrbinary(retrfile, fp.write)
-                        f_in = ftp_file
-                        f_out = dest+ tname+"/"+ tname +fdate+"_0000.csv"
-                        shutil.move(f_in, f_out)
-                    print(start_date)
-                    print(ftp_file)
-                start_date += timedelta(days=1)
-# Run upload script (assuming it's in the same directory)
-os.system("python3 /home/oracle/ClubCar/Visage/uploadOCI.py")
-# Clean up data directory
-shutil.rmtree(config.data_dir)
+    # Download files
+    for filename in file_list:
+        local_path = os.path.join(LOCAL_DIR, filename)
+        with open(local_path, "wb") as local_file:
+            ftp.retrbinary(f"RETR {filename}", local_file.write)
+            print(f"Downloaded: {filename}")
+
+print("All matching files downloaded successfully!")
