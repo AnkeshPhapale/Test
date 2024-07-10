@@ -1,32 +1,43 @@
 from ftplib import FTP
+from datetime import timedelta, datetime
+import shutil
+import config
 import os
 
-# FTP server details
-HOST = config.HOST
-PORT = config.PORT
-USERNAME = config.usr
-PASSWORD = config.pwd
+os.makedirs(config.data_dir, exist_ok=True)
 
-# Local directory to save downloaded files
-LOCAL_DIR = config.data_dir
+ftp = FTP()
+ftp.connect(config.HOST, config.PORT)
+ftp.login(config.usr, config.pwd)
 
-# Connect to FTP server
-with FTP() as ftp:
-    ftp.connect(HOST, PORT)
-    ftp.login(USERNAME, PASSWORD)
+dest = config.source_file_dir
+filenames = config.filenames
 
-    # List files matching the pattern "car%"
-    file_list = []
-    ftp.retrlines('NLST Charge%', file_list.append)
+start_date = datetime.now() - timedelta(days=365)
+end_date = datetime.now()
 
-    # Create local directory if it doesn't exist
-    os.makedirs(LOCAL_DIR, exist_ok=True)
+# Fetch the list of files once
+file_list = []
+ftp.retrlines('LIST', file_list.append)
+flist = [f.split()[-1] for f in file_list]
 
-    # Download files
-    for filename in file_list:
-        local_path = os.path.join(LOCAL_DIR, filename)
-        with open(local_path, "wb") as local_file:
-            ftp.retrbinary(f"RETR {filename}", local_file.write)
-            print(f"Downloaded: {filename}")
+for file in filenames:
+    while start_date < end_date:
+        tname = file
+        os.makedirs(os.path.join(config.data_dir, tname), exist_ok=True)
+        fdate = start_date.strftime("%Y-%m-%d")
+        ftp_file = file + fdate + "_0000.csv"
+        print(ftp_file)
+        if ftp_file in flist:
+            retrfile = "RETR " + ftp_file
+            with open(ftp_file, "wb") as fp:
+                ftp.retrbinary(retrfile, fp.write)
+                f_in = ftp_file
+                f_out = os.path.join(dest, tname, tname + fdate + "_0000.csv")
+                shutil.move(f_in, f_out)
+        start_date += timedelta(days=1)
 
-print("All matching files downloaded successfully!")
+# Clean up and execute your upload script
+os.system("python3 /home/oracle/ClubCar/Visage/uploadOCI.py")
+shutil.rmtree(config.data_dir)
+ftp.quit()
